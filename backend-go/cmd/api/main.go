@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"portfolio-dyah/backend-go/internal/auth"
+	"portfolio-dyah/backend-go/internal/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
@@ -25,6 +26,10 @@ func main (){
 	})
 
 	app.Post("/auth/login", auth.LoginHandler(db, os.Getenv("JWT_SECRET")))
+
+	app.Get("/admin/ping", middleware.RequireAuth(os.Getenv("JWT_SECRET")), func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "you are authenticated", "userID": c.Locals("userID")}})
+	})
 
 	log.Fatal(app.Listen(":8080"))
 }
