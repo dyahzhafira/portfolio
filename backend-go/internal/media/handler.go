@@ -3,7 +3,6 @@ package media
 import (
 	"context"
 	"fmt"
-	"mime/multipart"
 	"os"
 	"strconv"
 	"time"
@@ -38,21 +37,45 @@ func newR2Client(ctx context.Context) (*s3.Client, error) {
 	return client, nil
 }
 
+func parseOwnerID(value string) (*uint, error) {
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	id := uint(parsed)
+	return &id, nil
+}
+
 func UploadMedia(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectIDStr := c.FormValue("project_id")
+		experienceIDStr := c.FormValue("experience_id")
 		altText := c.FormValue("alt_text")
 
-		if projectIDStr == "" || altText == "" {
+		if (projectIDStr == "") == (experienceIDStr == "") {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": fiber.Map{"message": "project_id and alt_text are required", "code": "VALIDATION_FAILED"},
+				"error": fiber.Map{"message": "exactly one of project_id or experience_id is required", "code": "VALIDATION_FAILED"},
+			})
+		}
+		if altText == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fiber.Map{"message": "alt_text is required", "code": "VALIDATION_FAILED"},
 			})
 		}
 
-		projectID, err := strconv.ParseUint(projectIDStr, 10, 64)
+		projectID, err := parseOwnerID(projectIDStr)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": fiber.Map{"message": "project_id must be a number", "code": "VALIDATION_FAILED"},
+			})
+		}
+		experienceID, err := parseOwnerID(experienceIDStr)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fiber.Map{"message": "experience_id must be a number", "code": "VALIDATION_FAILED"},
 			})
 		}
 
@@ -71,7 +94,11 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 		}
 		defer file.Close()
 
-		key := fmt.Sprintf("%d-%d-%s", projectID, time.Now().Unix(), fileHeader.Filename)
+		ownerPart := projectIDStr
+		if ownerPart == "" {
+			ownerPart = "exp-" + experienceIDStr
+		}
+		key := fmt.Sprintf("%s-%d-%s", ownerPart, time.Now().Unix(), fileHeader.Filename)
 
 		ctx := context.Background()
 		client, err := newR2Client(ctx)
@@ -96,9 +123,10 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 		publicURL := fmt.Sprintf("%s/%s", os.Getenv("R2_PUBLIC_URL"), key)
 
 		m := Media{
-			ProjectID: uint(projectID),
-			URL:       publicURL,
-			AltText:   altText,
+			ProjectID:    projectID,
+			ExperienceID: experienceID,
+			URL:          publicURL,
+			AltText:      altText,
 		}
 		if err := db.Create(&m).Error; err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -110,4 +138,45 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 	}
 }
 
-var _ multipart.File
+func ListMedia(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectIDStr := c.Query("project_id")
+		experienceIDStr := c.Query("experience_id")
+
+		if (projectIDStr == "") == (experienceIDStr == "") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fiber.Map{"message": "exactly one of project_id or experience_id is required", "code": "VALIDATION_FAILED"},
+			})
+		}
+
+		var items []Media
+		query := db.Order("created_at asc")
+		if projectIDStr != "" {
+			query = query.Where("project_id = ?", projectIDStr)
+		} else {
+			query = query.Where("experience_id = ?", experienceIDStr)
+		}
+
+		if err := query.Find(&items).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not fetch media", "code": "INTERNAL_ERROR"},
+			})
+		}
+
+		return c.JSON(fiber.Map{"data": items})
+	}
+}
+
+func DeleteMedia(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		if err := db.Delete(&Media{}, id).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not delete media", "code": "INTERNAL_ERROR"},
+			})
+		}
+
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Media deleted"}})
+	}
+}

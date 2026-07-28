@@ -42,3 +42,27 @@ func CreateFeedback(db *gorm.DB) fiber.Handler {
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": fiber.Map{"message": "Thank you! Your message has been received. Your feedback really means to me."}})
 	}
 }
+
+func ListFeedback(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		var items []Feedback
+		if err := db.Order("created_at desc").Find(&items).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not fetch feedback", "code": "INTERNAL_ERROR"},
+			})
+		}
+		return c.JSON(fiber.Map{"data": items})
+	}
+}
+
+func DeleteFeedback(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		if err := db.Delete(&Feedback{}, id).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not delete feedback", "code": "INTERNAL_ERROR"},
+			})
+		}
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Feedback deleted"}})
+	}
+}

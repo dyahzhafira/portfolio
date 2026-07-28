@@ -6,10 +6,13 @@ import (
 	"time"
 
 	"portfolio-dyah/backend-go/internal/auth"
+	"portfolio-dyah/backend-go/internal/experience"
 	"portfolio-dyah/backend-go/internal/feedback"
+	"portfolio-dyah/backend-go/internal/github"
 	"portfolio-dyah/backend-go/internal/media"
 	"portfolio-dyah/backend-go/internal/middleware"
 	"portfolio-dyah/backend-go/internal/project"
+	"portfolio-dyah/backend-go/internal/skill"
 	"portfolio-dyah/backend-go/internal/tag"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,6 +53,7 @@ func main (){
 	})
 
 	app.Post("/auth/login", loginLimiter, auth.LoginHandler(db, os.Getenv("JWT_SECRET")))
+	app.Post("/auth/logout", auth.LogoutHandler())
 
 	app.Get("/admin/ping", middleware.RequireAuth(os.Getenv("JWT_SECRET")), func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"data": fiber.Map{"message": "you are authenticated", "userID": c.Locals("userID")}})
@@ -65,10 +69,30 @@ func main (){
 
 	app.Get("/tags", tag.ListTags(db))
 	admin.Post("/tags", tag.CreateTag(db))
+	admin.Patch("/tags/:id", tag.UpdateTag(db))
+	admin.Delete("/tags/:id", tag.DeleteTag(db))
 	admin.Post("/projects/:id/tags/:tagId", tag.AttachTagToProject(db))
+
+	app.Get("/media", media.ListMedia(db))
 	admin.Post("/media/upload", media.UploadMedia(db))
+	admin.Delete("/media/:id", media.DeleteMedia(db))
 
 	app.Post("/feedback", feedbackLimiter, feedback.CreateFeedback(db))
+	admin.Get("/feedback", feedback.ListFeedback(db))
+	admin.Delete("/feedback/:id", feedback.DeleteFeedback(db))
+
+	app.Get("/experience", experience.ListExperience(db))
+	admin.Post("/experience", experience.CreateExperience(db))
+	admin.Patch("/experience/:id", experience.UpdateExperience(db))
+	admin.Delete("/experience/:id", experience.DeleteExperience(db))
+	admin.Post("/experience/:id/tags/:tagId", experience.AttachTagToExperience(db))
+
+	app.Get("/github/contributions", github.ListContributions())
+
+	app.Get("/skills", skill.ListSkills(db))
+	admin.Post("/skills", skill.CreateSkill(db))
+	admin.Patch("/skills/:id", skill.UpdateSkill(db))
+	admin.Delete("/skills/:id", skill.DeleteSkill(db))
 
 	log.Fatal(app.Listen(":8080"))
 }

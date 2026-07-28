@@ -50,3 +50,17 @@ func LoginHandler(db *gorm.DB, jwtSecret string) fiber.Handler {
 		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Login successful"}})
 	}
 }
+
+func LogoutHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		c.Cookie(&fiber.Cookie{
+			Name:     "access_token",
+			Value:    "",
+			HTTPOnly: true,
+			Path:     "/",
+			MaxAge:   -1,
+		})
+
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Logged out"}})
+	}
+}

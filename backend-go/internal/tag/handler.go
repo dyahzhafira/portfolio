@@ -48,6 +48,42 @@ func CreateTag(db *gorm.DB) fiber.Handler {
 	}
 }
 
+func UpdateTag(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		var t project.Tag
+		if err := db.First(&t, id).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Tag not found", "code": "NOT_FOUND"},
+			})
+		}
+
+		var req CreateTagRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Invalid request body", "code": "VALIDATION_FAILED"},
+			})
+		}
+
+		updates := map[string]interface{}{}
+		if req.Name != "" {
+			updates["name"] = req.Name
+		}
+		if req.ColorToken != "" {
+			updates["color_token"] = req.ColorToken
+		}
+
+		if err := db.Model(&t).Updates(updates).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not update tag", "code": "INTERNAL_ERROR"},
+			})
+		}
+
+		return c.JSON(fiber.Map{"data": t})
+	}
+}
+
 func AttachTagToProject(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		projectID := c.Params("id")
@@ -74,5 +110,17 @@ func AttachTagToProject(db *gorm.DB) fiber.Handler {
 		}
 
 		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Tag attached"}})
+	}
+}
+
+func DeleteTag(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		if err := db.Delete(&project.Tag{}, id).Error; err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not delete tag", "code": "INTERNAL_ERROR"},
+			})
+		}
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Tag deleted"}})
 	}
 }
