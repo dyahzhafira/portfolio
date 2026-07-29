@@ -1,0 +1,4 @@
+ALTER TABLE projects ADD COLUMN started_at DATE;
+ALTER TABLE projects ADD COLUMN ended_at DATE;
+ALTER TABLE projects ADD COLUMN role TEXT;
+ALTER TABLE projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;

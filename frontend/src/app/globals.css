@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #fbf8f3;
+  --ink: #3a3530;
+  --rose: #f2c9d1;
+  --rose-bold: #e85d8a;
+  --lavender: #d9d3f0;
+  --sky: #c7e0ef;
+  --mint: #c9e4d1;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-rose: var(--rose);
+  --color-rose-bold: var(--rose-bold);
+  --color-lavender: var(--lavender);
+  --color-sky: var(--sky);
+  --color-mint: var(--mint);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+  --font-handwritten: var(--font-handwritten);
+
+  --shadow-sticky: 2px 3px 8px rgba(58, 53, 48, 0.1);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body), sans-serif;
+}
+
+@keyframes sticky-pulse {
+  0%, 100% {
+    transform: rotate(-2deg) scale(1);
+  }
+  50% {
+    transform: rotate(2deg) scale(1.04);
+  }
+}
+
+.loading-sticky {
+  animation: sticky-pulse 1.4s ease-in-out infinite;
+}
+
+.highlight {
+  background-image: linear-gradient(var(--rose) 0%, var(--rose) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 0.35em;
+  background-position: 0 85%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.1em;
+}
