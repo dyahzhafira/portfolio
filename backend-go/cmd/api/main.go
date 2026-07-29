@@ -32,7 +32,7 @@ func main (){
 	app:= fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,https://dyahzhafira.dev",
+		AllowOrigins:     "http://localhost:3000,https://dyahzhafira.dev,https://www.dyahzhafira.dev",
 		AllowHeaders:     "Origin, Content-Type, Accept",
 		AllowCredentials: true,
 	}))
