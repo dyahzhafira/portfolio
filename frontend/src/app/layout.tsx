@@ -35,6 +35,9 @@ const laBelleAurore = La_Belle_Aurore({
 export const metadata: Metadata = {
   title: "Dyah - Software Engineer",
   description: "Personal portfolio of Dyah, a software engineer building full-stack systems.",
+  icons: {
+    icon: "/logo-dyah.png",
+  },
 };
 
 export default function RootLayout({
