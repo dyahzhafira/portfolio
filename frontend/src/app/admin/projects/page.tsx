@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRequireAdmin } from "@/hooks/useRequireAdmin";
 import { useDragReorder } from "@/hooks/useDragReorder";
-import { getProjects, createProject, updateProject, deleteProject, ApiError } from "@/lib/api";
+import { getProjects, createProject, updateProject, deleteProject, uploadMedia, ApiError } from "@/lib/api";
 import type { ApiProject } from "@/lib/api";
 import Button from "@/components/Button";
 import MediaManager from "@/components/admin/MediaManager";
+import AutoGrowTextarea from "@/components/admin/AutoGrowTextarea";
+import PendingImagePicker, { type PendingImage } from "@/components/admin/PendingImagePicker";
 
 const inputClass =
   "border-0 border-b-[1.5px] border-ink bg-transparent py-1 font-body focus:outline-none focus:border-rose-bold w-full";
@@ -64,11 +66,11 @@ function EditProjectForm({
       </div>
       <label className="flex flex-col gap-1">
         <span className={labelClass}>Description</span>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+        <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
       </label>
       <label className="flex flex-col gap-1">
         <span className={labelClass}>Learnings</span>
-        <input value={learnings} onChange={(e) => setLearnings(e.target.value)} className={inputClass} />
+        <AutoGrowTextarea value={learnings} onChange={(e) => setLearnings(e.target.value)} className={inputClass} />
       </label>
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
@@ -100,19 +102,14 @@ export default function AdminProjectsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("in-progress");
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const createMutation = useMutation({
     mutationFn: createProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setSlug("");
-      setTitle("");
-      setDescription("");
-      setError(null);
-    },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not create project."),
   });
 
@@ -130,9 +127,36 @@ export default function AdminProjectsPage() {
     reorderMutation.mutate({ id, payload: { sort_order: sortOrder } })
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    createMutation.mutate({ slug, title, description, status });
+    setError(null);
+
+    if (pendingImages.some((img) => !img.altText.trim())) {
+      setError("Add alt text for every image before uploading (required for accessibility).");
+      return;
+    }
+
+    try {
+      const project = await createMutation.mutateAsync({ slug, title, description, status });
+
+      if (pendingImages.length > 0) {
+        setIsUploadingImage(true);
+        for (const img of pendingImages) {
+          await uploadMedia({ projectId: project.ID }, img.file, img.altText);
+        }
+        pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+        setIsUploadingImage(false);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setSlug("");
+      setTitle("");
+      setDescription("");
+      setPendingImages([]);
+    } catch (err) {
+      setIsUploadingImage(false);
+      setError(err instanceof ApiError ? err.message : "Could not create project.");
+    }
   }
 
   if (isChecking || !isAuthenticated) {
@@ -164,7 +188,7 @@ export default function AdminProjectsPage() {
         </div>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Description</span>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+          <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Status</span>
@@ -173,8 +197,18 @@ export default function AdminProjectsPage() {
             <option value="completed">completed</option>
           </select>
         </label>
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Images (optional)</span>
+          <PendingImagePicker images={pendingImages} onChange={setPendingImages} disabled={isUploadingImage} />
+        </label>
         {error && <p className="font-mono text-xs text-rose-bold">{error}</p>}
-        <Button type="submit">{createMutation.isPending ? "Adding…" : "Add Project"}</Button>
+        <Button type="submit">
+          {createMutation.isPending || isUploadingImage
+            ? isUploadingImage
+              ? "Uploading images…"
+              : "Adding…"
+            : "Add Project"}
+        </Button>
       </form>
 
       {ordered.length > 1 && (

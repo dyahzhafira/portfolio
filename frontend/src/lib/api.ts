@@ -190,6 +190,14 @@ export function updateExperience({ id, payload }: { id: number; payload: Partial
   return adminMutate<ApiExperience>(`/admin/experience/${id}`, "PATCH", payload);
 }
 
+export function attachTagToExperience({ experienceId, tagId }: { experienceId: number; tagId: number }) {
+  return adminMutate<void>(`/admin/experience/${experienceId}/tags/${tagId}`, "POST");
+}
+
+export function detachTagFromExperience({ experienceId, tagId }: { experienceId: number; tagId: number }) {
+  return adminMutate<void>(`/admin/experience/${experienceId}/tags/${tagId}`, "DELETE");
+}
+
 export type CreateSkillPayload = {
   name: string;
   category: string;

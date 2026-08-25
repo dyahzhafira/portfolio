@@ -5,10 +5,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRequireAdmin } from "@/hooks/useRequireAdmin";
 import { useDragReorder } from "@/hooks/useDragReorder";
-import { getExperience, createExperience, updateExperience, deleteExperience, ApiError } from "@/lib/api";
-import type { ApiExperience } from "@/lib/api";
+import {
+  getExperience,
+  createExperience,
+  updateExperience,
+  deleteExperience,
+  uploadMedia,
+  attachTagToExperience,
+  detachTagFromExperience,
+  ApiError,
+} from "@/lib/api";
+import type { ApiExperience, ApiTag } from "@/lib/api";
 import Button from "@/components/Button";
 import MediaManager from "@/components/admin/MediaManager";
+import AutoGrowTextarea from "@/components/admin/AutoGrowTextarea";
+import TagPicker from "@/components/admin/TagPicker";
+import PendingImagePicker, { type PendingImage } from "@/components/admin/PendingImagePicker";
 
 const inputClass =
   "border-0 border-b-[1.5px] border-ink bg-transparent py-1 font-body focus:outline-none focus:border-rose-bold w-full";
@@ -34,6 +46,15 @@ function EditExperienceForm({ exp, onDone }: { exp: ApiExperience; onDone: () =>
       onDone();
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not update experience."),
+  });
+
+  const tagMutation = useMutation({
+    mutationFn: ({ tag, selected }: { tag: ApiTag; selected: boolean }) =>
+      selected
+        ? attachTagToExperience({ experienceId: exp.ID, tagId: tag.ID })
+        : detachTagFromExperience({ experienceId: exp.ID, tagId: tag.ID }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["experience"] }),
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Could not update tech stack."),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -68,8 +89,13 @@ function EditExperienceForm({ exp, onDone }: { exp: ApiExperience; onDone: () =>
       </div>
       <label className="flex flex-col gap-1">
         <span className={labelClass}>Description</span>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+        <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
       </label>
+      <TagPicker
+        selectedIds={exp.Tags.map((t) => t.ID)}
+        disabled={tagMutation.isPending}
+        onToggle={(tag, selected) => tagMutation.mutate({ tag, selected })}
+      />
       {error && <p className="font-mono text-xs text-rose-bold">{error}</p>}
       <div className="flex gap-3">
         <Button type="submit">{updateMutation.isPending ? "Saving…" : "Save"}</Button>
@@ -95,21 +121,15 @@ export default function AdminExperiencePage() {
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
   const [description, setDescription] = useState("");
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [selectedTags, setSelectedTags] = useState<ApiTag[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const createMutation = useMutation({
     mutationFn: createExperience,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["experience"] });
-      setRole("");
-      setOrg("");
-      setPeriodStart("");
-      setPeriodEnd("");
-      setDescription("");
-      setError(null);
-    },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not create experience."),
   });
 
@@ -127,15 +147,49 @@ export default function AdminExperiencePage() {
     reorderMutation.mutate({ id, payload: { sort_order: sortOrder } })
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    createMutation.mutate({
-      role,
-      org,
-      period_start: periodStart,
-      period_end: periodEnd || undefined,
-      description,
-    });
+    setError(null);
+
+    if (pendingImages.some((img) => !img.altText.trim())) {
+      setError("Add alt text for every image before uploading (required for accessibility).");
+      return;
+    }
+
+    try {
+      const exp = await createMutation.mutateAsync({
+        role,
+        org,
+        period_start: periodStart,
+        period_end: periodEnd || undefined,
+        description,
+      });
+
+      if (pendingImages.length > 0) {
+        setIsUploadingImage(true);
+        for (const img of pendingImages) {
+          await uploadMedia({ experienceId: exp.ID }, img.file, img.altText);
+        }
+        pendingImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+        setIsUploadingImage(false);
+      }
+
+      await Promise.all(
+        selectedTags.map((tag) => attachTagToExperience({ experienceId: exp.ID, tagId: tag.ID }))
+      );
+
+      queryClient.invalidateQueries({ queryKey: ["experience"] });
+      setRole("");
+      setOrg("");
+      setPeriodStart("");
+      setPeriodEnd("");
+      setSelectedTags([]);
+      setDescription("");
+      setPendingImages([]);
+    } catch (err) {
+      setIsUploadingImage(false);
+      setError(err instanceof ApiError ? err.message : "Could not create experience.");
+    }
   }
 
   if (isChecking || !isAuthenticated) {
@@ -183,10 +237,26 @@ export default function AdminExperiencePage() {
         </div>
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Description</span>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+          <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+        </label>
+        <TagPicker
+          selectedIds={selectedTags.map((t) => t.ID)}
+          onToggle={(tag, selected) =>
+            setSelectedTags((prev) => (selected ? [...prev, tag] : prev.filter((t) => t.ID !== tag.ID)))
+          }
+        />
+        <label className="flex flex-col gap-1">
+          <span className={labelClass}>Images (optional)</span>
+          <PendingImagePicker images={pendingImages} onChange={setPendingImages} disabled={isUploadingImage} />
         </label>
         {error && <p className="font-mono text-xs text-rose-bold">{error}</p>}
-        <Button type="submit">{createMutation.isPending ? "Adding…" : "Add Experience"}</Button>
+        <Button type="submit">
+          {createMutation.isPending || isUploadingImage
+            ? isUploadingImage
+              ? "Uploading images…"
+              : "Adding…"
+            : "Add Experience"}
+        </Button>
       </form>
 
       {ordered.length > 1 && (
