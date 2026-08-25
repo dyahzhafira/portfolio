@@ -86,6 +86,7 @@ func main (){
 	admin.Patch("/experience/:id", experience.UpdateExperience(db))
 	admin.Delete("/experience/:id", experience.DeleteExperience(db))
 	admin.Post("/experience/:id/tags/:tagId", experience.AttachTagToExperience(db))
+	admin.Delete("/experience/:id/tags/:tagId", experience.DetachTagFromExperience(db))
 
 	app.Get("/github/contributions", github.ListContributions())
 

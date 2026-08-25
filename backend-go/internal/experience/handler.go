@@ -198,3 +198,32 @@ func AttachTagToExperience(db *gorm.DB) fiber.Handler {
 		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Tag attached"}})
 	}
 }
+
+func DetachTagFromExperience(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		experienceID := c.Params("id")
+		tagID := c.Params("tagId")
+
+		var exp Experience
+		if err := db.First(&exp, experienceID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Experience not found", "code": "NOT_FOUND"},
+			})
+		}
+
+		var t project.Tag
+		if err := db.First(&t, tagID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Tag not found", "code": "NOT_FOUND"},
+			})
+		}
+
+		if err := db.Model(&exp).Association("Tags").Delete(&t); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not detach tag", "code": "INTERNAL_ERROR"},
+			})
+		}
+
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Tag detached"}})
+	}
+}

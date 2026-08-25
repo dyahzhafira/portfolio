@@ -1,32 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMedia, uploadMedia, deleteMedia, ApiError } from "@/lib/api";
+import PendingImagePicker, { type PendingImage } from "./PendingImagePicker";
 
 type Owner = { projectId?: number; experienceId?: number };
 
 export default function MediaManager({ owner }: { owner: Owner }) {
   const queryClient = useQueryClient();
   const queryKey = ["media", owner.projectId ?? owner.experienceId, owner.projectId ? "project" : "experience"];
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [altText, setAltText] = useState("");
+  const [pending, setPending] = useState<PendingImage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: media } = useQuery({
     queryKey,
     queryFn: () => getMedia(owner),
-  });
-
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadMedia(owner, file, altText),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-      setAltText("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setError(null);
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Upload failed."),
   });
 
   const deleteMutation = useMutation({
@@ -34,15 +24,27 @@ export default function MediaManager({ owner }: { owner: Owner }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!altText.trim()) {
-      setError("Add alt text before uploading (required for accessibility).");
-      e.target.value = "";
+  async function handleUpload() {
+    setError(null);
+    if (pending.length === 0) return;
+    if (pending.some((img) => !img.altText.trim())) {
+      setError("Add alt text for every image before uploading (required for accessibility).");
       return;
     }
-    uploadMutation.mutate(file);
+
+    setIsUploading(true);
+    try {
+      for (const img of pending) {
+        await uploadMedia(owner, img.file, img.altText);
+      }
+      pending.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+      setPending([]);
+      queryClient.invalidateQueries({ queryKey });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   return (
@@ -65,23 +67,18 @@ export default function MediaManager({ owner }: { owner: Owner }) {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          value={altText}
-          onChange={(e) => setAltText(e.target.value)}
-          placeholder="alt text (required)"
-          className="border-0 border-b-[1.5px] border-ink bg-transparent py-1 font-body text-sm focus:outline-none focus:border-rose-bold flex-1"
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="font-mono text-xs"
-        />
-      </div>
+      <PendingImagePicker images={pending} onChange={setPending} disabled={isUploading} />
+      {pending.length > 0 && (
+        <button
+          type="button"
+          onClick={handleUpload}
+          disabled={isUploading}
+          className="mt-2 font-mono text-xs uppercase tracking-wide text-white bg-rose-bold px-3 py-1.5 rounded-sm disabled:opacity-50 self-start"
+        >
+          {isUploading ? "Uploading…" : `Upload ${pending.length} image${pending.length > 1 ? "s" : ""}`}
+        </button>
+      )}
       {error && <p className="font-mono text-xs text-rose-bold mt-1">{error}</p>}
-      {uploadMutation.isPending && <p className="font-mono text-xs text-ink/50 mt-1">Uploading…</p>}
     </div>
   );
 }
