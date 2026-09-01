@@ -113,6 +113,35 @@ func AttachTagToProject(db *gorm.DB) fiber.Handler {
 	}
 }
 
+func DetachTagFromProject(db *gorm.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		projectID := c.Params("id")
+		tagID := c.Params("tagId")
+
+		var proj project.Project
+		if err := db.First(&proj, projectID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Project not found", "code": "NOT_FOUND"},
+			})
+		}
+
+		var t project.Tag
+		if err := db.First(&t, tagID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Tag not found", "code": "NOT_FOUND"},
+			})
+		}
+
+		if err := db.Model(&proj).Association("Tags").Delete(&t); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": fiber.Map{"message": "Could not detach tag", "code": "INTERNAL_ERROR"},
+			})
+		}
+
+		return c.JSON(fiber.Map{"data": fiber.Map{"message": "Tag detached"}})
+	}
+}
+
 func DeleteTag(db *gorm.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("id")

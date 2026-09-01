@@ -63,7 +63,7 @@ export default function PolaroidGallery({ images }: { images: ApiMedia[] }) {
                 <img
                   src={img.URL}
                   alt={img.AltText}
-                  className="w-40 h-40 object-cover"
+                  className="w-40 h-40 object-contain"
                 />
               </div>
             );
@@ -90,7 +90,7 @@ export default function PolaroidGallery({ images }: { images: ApiMedia[] }) {
           <img
             src={images[current].URL}
             alt={images[current].AltText}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
       </button>

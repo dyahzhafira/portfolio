@@ -72,6 +72,7 @@ func main (){
 	admin.Patch("/tags/:id", tag.UpdateTag(db))
 	admin.Delete("/tags/:id", tag.DeleteTag(db))
 	admin.Post("/projects/:id/tags/:tagId", tag.AttachTagToProject(db))
+	admin.Delete("/projects/:id/tags/:tagId", tag.DetachTagFromProject(db))
 
 	app.Get("/media", media.ListMedia(db))
 	admin.Post("/media/upload", media.UploadMedia(db))

@@ -169,6 +169,14 @@ export function updateProject({ id, payload }: { id: number; payload: Partial<Cr
   return adminMutate<ApiProject>(`/admin/projects/${id}`, "PATCH", payload);
 }
 
+export function attachTagToProject({ projectId, tagId }: { projectId: number; tagId: number }) {
+  return adminMutate<void>(`/admin/projects/${projectId}/tags/${tagId}`, "POST");
+}
+
+export function detachTagFromProject({ projectId, tagId }: { projectId: number; tagId: number }) {
+  return adminMutate<void>(`/admin/projects/${projectId}/tags/${tagId}`, "DELETE");
+}
+
 export type CreateExperiencePayload = {
   role: string;
   org: string;
