@@ -53,6 +53,13 @@ export default function ProjectDetailPage() {
         <section className="max-w-[1200px] mx-auto px-6 md:px-16 py-16">
           <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3">{project.Status}</p>
           <h1 className="font-display text-4xl md:text-5xl mb-4">{project.Title}</h1>
+
+          {media && media.length > 0 && (
+            <div className="mb-8">
+              <PolaroidGallery images={media} />
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 mb-6">
             {project.Tags.map((t) => {
               const Icon = skillIconMap[t.IconSlug];
@@ -61,7 +68,7 @@ export default function ProjectDetailPage() {
               );
             })}
           </div>
-          <p className="font-body text-lg text-ink/80 max-w-2xl mb-8">{project.Description}</p>
+          <p className="font-body text-lg text-ink/80 text-justify mb-8">{project.Description}</p>
 
           <div className="flex gap-4 mb-16">
             {project.DemoURL && <Button href={project.DemoURL}>View Demo</Button>}
@@ -72,16 +79,10 @@ export default function ProjectDetailPage() {
             )}
           </div>
 
-          {media && media.length > 0 && (
-            <div className="mb-16">
-              <PolaroidGallery images={media} />
-            </div>
-          )}
-
           {project.Learnings && (
-            <div className="bg-lavender p-6 rounded-sm shadow-sticky -rotate-1 max-w-xl">
+            <div className="bg-lavender p-6 rounded-sm shadow-sticky -rotate-1">
               <p className="font-handwritten text-xl text-rose-bold mb-3">What I learned</p>
-              <p className="font-body text-sm text-ink/80">{project.Learnings}</p>
+              <p className="font-body text-sm text-ink/80 text-justify">{project.Learnings}</p>
             </div>
           )}
         </section>

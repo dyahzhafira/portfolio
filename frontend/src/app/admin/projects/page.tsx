@@ -5,12 +5,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRequireAdmin } from "@/hooks/useRequireAdmin";
 import { useDragReorder } from "@/hooks/useDragReorder";
-import { getProjects, createProject, updateProject, deleteProject, uploadMedia, ApiError } from "@/lib/api";
-import type { ApiProject } from "@/lib/api";
+import {
+  getProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+  uploadMedia,
+  attachTagToProject,
+  detachTagFromProject,
+  ApiError,
+} from "@/lib/api";
+import type { ApiProject, ApiTag } from "@/lib/api";
 import Button from "@/components/Button";
 import MediaManager from "@/components/admin/MediaManager";
 import AutoGrowTextarea from "@/components/admin/AutoGrowTextarea";
 import PendingImagePicker, { type PendingImage } from "@/components/admin/PendingImagePicker";
+import TagPicker from "@/components/admin/TagPicker";
 
 const inputClass =
   "border-0 border-b-[1.5px] border-ink bg-transparent py-1 font-body focus:outline-none focus:border-rose-bold w-full";
@@ -39,6 +49,15 @@ function EditProjectForm({
       onDone();
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not update project."),
+  });
+
+  const tagMutation = useMutation({
+    mutationFn: ({ tag, selected }: { tag: ApiTag; selected: boolean }) =>
+      selected
+        ? attachTagToProject({ projectId: project.ID, tagId: tag.ID })
+        : detachTagFromProject({ projectId: project.ID, tagId: tag.ID }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Could not update tech stack."),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -72,6 +91,11 @@ function EditProjectForm({
         <span className={labelClass}>Learnings</span>
         <AutoGrowTextarea value={learnings} onChange={(e) => setLearnings(e.target.value)} className={inputClass} />
       </label>
+      <TagPicker
+        selectedIds={project.Tags.map((t) => t.ID)}
+        disabled={tagMutation.isPending}
+        onToggle={(tag, selected) => tagMutation.mutate({ tag, selected })}
+      />
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Demo URL</span>
@@ -103,6 +127,7 @@ export default function AdminProjectsPage() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("in-progress");
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [selectedTags, setSelectedTags] = useState<ApiTag[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -148,10 +173,15 @@ export default function AdminProjectsPage() {
         setIsUploadingImage(false);
       }
 
+      await Promise.all(
+        selectedTags.map((tag) => attachTagToProject({ projectId: project.ID, tagId: tag.ID }))
+      );
+
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setSlug("");
       setTitle("");
       setDescription("");
+      setSelectedTags([]);
       setPendingImages([]);
     } catch (err) {
       setIsUploadingImage(false);
@@ -197,6 +227,12 @@ export default function AdminProjectsPage() {
             <option value="completed">completed</option>
           </select>
         </label>
+        <TagPicker
+          selectedIds={selectedTags.map((t) => t.ID)}
+          onToggle={(tag, selected) =>
+            setSelectedTags((prev) => (selected ? [...prev, tag] : prev.filter((t) => t.ID !== tag.ID)))
+          }
+        />
         <label className="flex flex-col gap-1">
           <span className={labelClass}>Images (optional)</span>
           <PendingImagePicker images={pendingImages} onChange={setPendingImages} disabled={isUploadingImage} />
