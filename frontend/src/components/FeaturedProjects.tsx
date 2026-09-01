@@ -2,15 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/lib/api";
-import type { TagColor } from "./Tag";
 import ProjectCard from "./ProjectCard";
 import type { ProjectCardData } from "./ProjectCard";
-
-const validColors: TagColor[] = ["rose", "lavender", "sky", "mint", "neutral"];
-
-function toTagColor(token: string): TagColor {
-  return (validColors as string[]).includes(token) ? (token as TagColor) : "neutral";
-}
 
 export default function FeaturedProjects({ limit = 3 }: { limit?: number }) {
   const { data, isLoading, isError } = useQuery({
@@ -38,8 +31,7 @@ export default function FeaturedProjects({ limit = 3 }: { limit?: number }) {
           title: p.Title,
           description: p.Description,
           category: primaryTag?.Name ?? p.Status,
-          color: primaryTag ? toTagColor(primaryTag.ColorToken) : "neutral",
-          tags: p.Tags.map((t) => t.Name),
+          tags: p.Tags.map((t) => ({ name: t.Name, iconSlug: t.IconSlug })),
           demoUrl: p.DemoURL || undefined,
           repoUrl: p.RepoURL || undefined,
         };

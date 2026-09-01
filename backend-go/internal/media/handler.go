@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -88,6 +89,7 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 
 		file, err := fileHeader.Open()
 		if err != nil {
+			log.Printf("media upload: fileHeader.Open failed: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"message": "could not open uploaded file", "code": "INTERNAL_ERROR"},
 			})
@@ -103,6 +105,7 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 		ctx := context.Background()
 		client, err := newR2Client(ctx)
 		if err != nil {
+			log.Printf("media upload: newR2Client failed: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"message": "could not connect to storage", "code": "INTERNAL_ERROR"},
 			})
@@ -115,6 +118,7 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 			ContentType: aws.String(fileHeader.Header.Get("Content-Type")),
 		})
 		if err != nil {
+			log.Printf("media upload: PutObject failed: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"message": "could not upload file", "code": "INTERNAL_ERROR"},
 			})
@@ -129,6 +133,7 @@ func UploadMedia(db *gorm.DB) fiber.Handler {
 			AltText:      altText,
 		}
 		if err := db.Create(&m).Error; err != nil {
+			log.Printf("media upload: db.Create failed: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"message": "could not save media record", "code": "INTERNAL_ERROR"},
 			})

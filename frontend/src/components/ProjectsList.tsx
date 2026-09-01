@@ -3,15 +3,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/lib/api";
-import type { TagColor } from "./Tag";
 import ProjectCard from "./ProjectCard";
 import type { ProjectCardData } from "./ProjectCard";
-
-const validColors: TagColor[] = ["rose", "lavender", "sky", "mint", "neutral"];
-
-function toTagColor(token: string): TagColor {
-  return (validColors as string[]).includes(token) ? (token as TagColor) : "neutral";
-}
 
 export default function ProjectsList() {
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -23,9 +16,9 @@ export default function ProjectsList() {
 
   const allTags = useMemo(() => {
     if (!data) return [];
-    const seen = new Map<string, string>();
-    data.forEach((p) => p.Tags.forEach((t) => seen.set(t.Name, t.ColorToken)));
-    return Array.from(seen.entries());
+    const seen = new Set<string>();
+    data.forEach((p) => p.Tags.forEach((t) => seen.add(t.Name)));
+    return Array.from(seen);
   }, [data]);
 
   const filtered = useMemo(() => {
@@ -60,7 +53,7 @@ export default function ProjectsList() {
           >
             All
           </button>
-          {allTags.map(([name]) => (
+          {allTags.map((name) => (
             <button
               key={name}
               onClick={() => setActiveTag(name)}
@@ -86,8 +79,7 @@ export default function ProjectsList() {
               title: p.Title,
               description: p.Description,
               category: primaryTag?.Name ?? p.Status,
-              color: primaryTag ? toTagColor(primaryTag.ColorToken) : "neutral",
-              tags: p.Tags.map((t) => t.Name),
+              tags: p.Tags.map((t) => ({ name: t.Name, iconSlug: t.IconSlug })),
               demoUrl: p.DemoURL || undefined,
               repoUrl: p.RepoURL || undefined,
             };
