@@ -41,7 +41,7 @@ export default function ExperienceList({ limit }: { limit?: number }) {
             org: exp.Org,
             period: formatPeriod(exp.PeriodStart, exp.PeriodEnd),
             description: exp.Description,
-            tags: exp.Tags.map((t) => t.Name),
+            tags: exp.Tags.map((t) => ({ name: t.Name, iconSlug: t.IconSlug })),
           }}
         />
       ))}

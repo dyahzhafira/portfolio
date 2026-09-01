@@ -7,6 +7,7 @@ import Button from "@/components/Button";
 import Tag from "@/components/Tag";
 import PolaroidGallery from "@/components/PolaroidGallery";
 import { getProject, getMedia } from "@/lib/api";
+import { skillIconMap } from "@/lib/skill-icons";
 
 const GITHUB_URL = "https://github.com/dyahzhafira";
 const LINKEDIN_URL = "https://www.linkedin.com/in/dyahzhafira/";
@@ -53,9 +54,12 @@ export default function ProjectDetailPage() {
           <p className="font-mono text-xs uppercase tracking-wide text-ink/50 mb-3">{project.Status}</p>
           <h1 className="font-display text-4xl md:text-5xl mb-4">{project.Title}</h1>
           <div className="flex flex-wrap gap-2 mb-6">
-            {project.Tags.map((t) => (
-              <Tag key={t.ID} label={t.Name} color="neutral" />
-            ))}
+            {project.Tags.map((t) => {
+              const Icon = skillIconMap[t.IconSlug];
+              return (
+                <Tag key={t.ID} label={t.Name} color="neutral" icon={Icon ? <Icon /> : undefined} />
+              );
+            })}
           </div>
           <p className="font-body text-lg text-ink/80 max-w-2xl mb-8">{project.Description}</p>
 

@@ -19,8 +19,8 @@ func ListTags(db *gorm.DB) fiber.Handler {
 }
 
 type CreateTagRequest struct {
-	Name       string `json:"name"`
-	ColorToken string `json:"color_token"`
+	Name     string `json:"name"`
+	IconSlug string `json:"icon_slug"`
 }
 
 func CreateTag(db *gorm.DB) fiber.Handler {
@@ -31,13 +31,13 @@ func CreateTag(db *gorm.DB) fiber.Handler {
 				"error": fiber.Map{"message": "Invalid request body", "code": "VALIDATION_FAILED"},
 			})
 		}
-		if req.Name == "" || req.ColorToken == "" {
+		if req.Name == "" || req.IconSlug == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": fiber.Map{"message": "name and color_token are required", "code": "VALIDATION_FAILED"},
+				"error": fiber.Map{"message": "name and icon_slug are required", "code": "VALIDATION_FAILED"},
 			})
 		}
 
-		t := project.Tag{Name: req.Name, ColorToken: req.ColorToken}
+		t := project.Tag{Name: req.Name, IconSlug: req.IconSlug}
 		if err := db.Create(&t).Error; err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"message": "Could not create tag", "code": "INTERNAL_ERROR"},
@@ -70,8 +70,8 @@ func UpdateTag(db *gorm.DB) fiber.Handler {
 		if req.Name != "" {
 			updates["name"] = req.Name
 		}
-		if req.ColorToken != "" {
-			updates["color_token"] = req.ColorToken
+		if req.IconSlug != "" {
+			updates["icon_slug"] = req.IconSlug
 		}
 
 		if err := db.Model(&t).Updates(updates).Error; err != nil {

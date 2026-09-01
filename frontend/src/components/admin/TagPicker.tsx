@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getTags } from "@/lib/api";
 import type { ApiTag } from "@/lib/api";
+import { skillIconMap } from "@/lib/skill-icons";
 
 const labelClass = "font-mono text-xs uppercase tracking-wide text-ink/70";
 
@@ -31,18 +32,20 @@ export default function TagPicker({
       <div className="flex flex-wrap gap-2">
         {tags.map((tag) => {
           const selected = selectedIds.includes(tag.ID);
+          const Icon = skillIconMap[tag.IconSlug];
           return (
             <button
               key={tag.ID}
               type="button"
               disabled={disabled}
               onClick={() => onToggle(tag, !selected)}
-              className={`px-2.5 py-1 rounded-[3px] border-[0.5px] font-mono text-xs uppercase tracking-wide transition-colors disabled:opacity-50 ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] border-[0.5px] font-mono text-xs uppercase tracking-wide transition-colors disabled:opacity-50 ${
                 selected
                   ? "bg-rose-bold text-white border-rose-bold"
                   : "bg-transparent text-ink/70 border-ink/20 hover:border-ink/40"
               }`}
             >
+              {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
               {tag.Name}
             </button>
           );

@@ -3,7 +3,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 export type ApiTag = {
   ID: number;
   Name: string;
-  ColorToken: string;
+  IconSlug: string;
 };
 
 export type ApiExperience = {
@@ -219,7 +219,7 @@ export function updateSkill({ id, payload }: { id: number; payload: Partial<Crea
 
 export type CreateTagPayload = {
   name: string;
-  color_token: string;
+  icon_slug: string;
 };
 
 export function createTag(payload: CreateTagPayload) {

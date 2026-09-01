@@ -5,7 +5,7 @@ import "time"
 type Tag struct {
 	ID			uint	`gorm:"primaryKey"`
 	Name		string	`gorm:"unique;not null"`
-	ColorToken	string	`gorm:"column:color_token;not null"`
+	IconSlug	string	`gorm:"column:icon_slug;not null"`
 }
 
 func (Tag) TableName() string {

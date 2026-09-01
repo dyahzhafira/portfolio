@@ -1,5 +1,6 @@
 import Tag from "./Tag";
 import CardImageSlider from "./CardImageSlider";
+import { skillIconMap } from "@/lib/skill-icons";
 
 export type ExperienceData = {
   id?: number;
@@ -7,7 +8,7 @@ export type ExperienceData = {
   org: string;
   period: string;
   description: string;
-  tags: string[];
+  tags: { name: string; iconSlug: string }[];
 };
 
 export default function ExperienceItem({
@@ -24,9 +25,12 @@ export default function ExperienceItem({
       <p className="font-handwritten text-lg text-rose-bold mb-2">@ {data.org}</p>
       <p className="font-body text-sm text-ink/80 mb-3">{data.description}</p>
       <div className="flex flex-wrap gap-2">
-        {data.tags.map((tag) => (
-          <Tag key={tag} label={tag} color="sky" />
-        ))}
+        {data.tags.map((tag) => {
+          const Icon = skillIconMap[tag.iconSlug];
+          return (
+            <Tag key={tag.name} label={tag.name} color="sky" icon={Icon ? <Icon /> : undefined} />
+          );
+        })}
       </div>
     </div>
   );

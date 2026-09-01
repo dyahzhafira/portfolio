@@ -6,17 +6,18 @@ import Link from "next/link";
 import { useRequireAdmin } from "@/hooks/useRequireAdmin";
 import { getTags, createTag, updateTag, deleteTag, ApiError } from "@/lib/api";
 import type { ApiTag } from "@/lib/api";
+import { skillIconMap } from "@/lib/skill-icons";
 import Button from "@/components/Button";
 
 const inputClass =
   "border-0 border-b-[1.5px] border-ink bg-transparent py-1 font-body focus:outline-none focus:border-rose-bold w-full";
 const labelClass = "font-mono text-xs uppercase tracking-wide text-ink/70";
-const colorOptions = ["rose", "lavender", "sky", "mint"];
+const iconSlugs = Object.keys(skillIconMap);
 
 function EditTagForm({ tag, onDone }: { tag: ApiTag; onDone: () => void }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState(tag.Name);
-  const [colorToken, setColorToken] = useState(tag.ColorToken);
+  const [iconSlug, setIconSlug] = useState(tag.IconSlug);
   const [error, setError] = useState<string | null>(null);
 
   const updateMutation = useMutation({
@@ -30,7 +31,7 @@ function EditTagForm({ tag, onDone }: { tag: ApiTag; onDone: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    updateMutation.mutate({ id: tag.ID, payload: { name, color_token: colorToken } });
+    updateMutation.mutate({ id: tag.ID, payload: { name, icon_slug: iconSlug } });
   }
 
   return (
@@ -41,11 +42,11 @@ function EditTagForm({ tag, onDone }: { tag: ApiTag; onDone: () => void }) {
           <input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
         </label>
         <label className="flex flex-col gap-1">
-          <span className={labelClass}>Color</span>
-          <select value={colorToken} onChange={(e) => setColorToken(e.target.value)} className={inputClass}>
-            {colorOptions.map((c) => (
-              <option key={c} value={c}>
-                {c}
+          <span className={labelClass}>Icon</span>
+          <select value={iconSlug} onChange={(e) => setIconSlug(e.target.value)} className={inputClass}>
+            {iconSlugs.map((slug) => (
+              <option key={slug} value={slug}>
+                {slug}
               </option>
             ))}
           </select>
@@ -68,7 +69,7 @@ export default function AdminTagsPage() {
   const { data: tags } = useQuery({ queryKey: ["tags"], queryFn: getTags, enabled: isAuthenticated });
 
   const [name, setName] = useState("");
-  const [colorToken, setColorToken] = useState(colorOptions[0]);
+  const [iconSlug, setIconSlug] = useState(iconSlugs[0]);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -89,7 +90,7 @@ export default function AdminTagsPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    createMutation.mutate({ name, color_token: colorToken });
+    createMutation.mutate({ name, icon_slug: iconSlug });
   }
 
   if (isChecking || !isAuthenticated) {
@@ -115,11 +116,11 @@ export default function AdminTagsPage() {
             <input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="Go" />
           </label>
           <label className="flex flex-col gap-1">
-            <span className={labelClass}>Color</span>
-            <select value={colorToken} onChange={(e) => setColorToken(e.target.value)} className={inputClass}>
-              {colorOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+            <span className={labelClass}>Icon</span>
+            <select value={iconSlug} onChange={(e) => setIconSlug(e.target.value)} className={inputClass}>
+              {iconSlugs.map((slug) => (
+                <option key={slug} value={slug}>
+                  {slug}
                 </option>
               ))}
             </select>
@@ -135,7 +136,7 @@ export default function AdminTagsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-display text-lg">{t.Name}</p>
-                <p className="font-mono text-xs text-ink/50">{t.ColorToken}</p>
+                <p className="font-mono text-xs text-ink/50">{t.IconSlug}</p>
               </div>
               <div className="flex items-center gap-4">
                 <button
